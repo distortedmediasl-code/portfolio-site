@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /Hiwash-Company-Profile.dc.html
+Disallow: /YouTube-Thumbnails.dc.html
+
+Sitemap: https://aashxq.pages.dev/sitemap.xml
