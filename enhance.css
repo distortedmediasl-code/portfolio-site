@@ -1,0 +1,1441 @@
+/* ============================================================
+   enhance.css — portfolio enrichment layer
+   Mohamed Aashiq · Creative Multimedia Designer
+   Adds: preloader, film grain, custom cursor, lightbox,
+         gallery affordances, back-to-top, marquee pause.
+   Pairs with enhance.js. Fully self-contained; no build step.
+   ============================================================ */
+
+:root {
+  --e-accent: #01d437;
+  --e-bg: #0b1720;
+  --e-surface: #10222d;
+  --e-hairline: rgba(255, 255, 255, .12);
+  --e-text: #f2f6f7;
+  --e-muted: #8b9ea6;
+  --e-ease: cubic-bezier(.2, .8, .2, 1);
+}
+
+/* ---------- 1. Preloader ---------------------------------- */
+#e-preload {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  background: var(--e-bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 26px;
+  transition: opacity .7s var(--e-ease), visibility .7s;
+}
+#e-preload.done { opacity: 0; visibility: hidden; }
+#e-preload .e-pl-mark {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: clamp(30px, 7vw, 54px);
+  letter-spacing: -.03em;
+  color: var(--e-text);
+  display: flex;
+  gap: .06em;
+}
+#e-preload .e-pl-mark span {
+  opacity: 0;
+  transform: translateY(18px);
+  animation: ePlIn .55s var(--e-ease) forwards;
+}
+@keyframes ePlIn { to { opacity: 1; transform: none } }
+#e-preload .e-pl-dot { color: var(--e-accent) }
+
+/* ---------- 2. Film grain --------------------------------- */
+#e-grain {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: .035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ---------- 3. Custom cursor (fine pointers only) --------- */
+#e-cur, #e-cur-ring { display: none }
+
+@media (hover: hover) and (pointer: fine) {
+  html.e-cursor-on, html.e-cursor-on * { cursor: none !important }
+
+  #e-cur, #e-cur-ring {
+    display: block;
+    position: fixed;
+    top: 0; left: 0;
+    z-index: 9998;
+    pointer-events: none;
+    border-radius: 50%;
+    mix-blend-mode: difference;
+  }
+  #e-cur {
+    width: 7px; height: 7px;
+    background: #fff;
+    margin: -3.5px 0 0 -3.5px;
+  }
+  #e-cur-ring {
+    width: 34px; height: 34px;
+    margin: -17px 0 0 -17px;
+    border: 1px solid rgba(255, 255, 255, .55);
+    transition: width .28s var(--e-ease), height .28s var(--e-ease),
+                margin .28s var(--e-ease), border-color .28s var(--e-ease),
+                background .28s var(--e-ease), opacity .2s;
+  }
+  /* over an interactive element */
+  html.e-hot #e-cur-ring {
+    width: 56px; height: 56px;
+    margin: -28px 0 0 -28px;
+    border-color: var(--e-accent);
+    background: rgba(1, 212, 55, .12);
+  }
+  html.e-hot #e-cur { opacity: 0 }
+  /* over a zoomable image — ring carries a label */
+  #e-cur-ring::after {
+    content: attr(data-label);
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    color: var(--e-bg);
+    opacity: 0;
+    transition: opacity .2s;
+  }
+  html.e-view #e-cur-ring {
+    width: 74px; height: 74px;
+    margin: -37px 0 0 -37px;
+    background: var(--e-accent);
+    border-color: var(--e-accent);
+    mix-blend-mode: normal;
+  }
+  html.e-view #e-cur-ring::after { opacity: 1 }
+  html.e-view #e-cur { opacity: 0 }
+  html.e-down #e-cur-ring { transform: scale(.82) }
+}
+
+/* ---------- 3b. Intrinsic sizing --------------------------
+   enhance.js stamps width/height attributes on images so the browser can
+   reserve space before load. Those attributes also supply a *used* height,
+   which would stretch any image whose CSS sets width without a height —
+   height:auto restores the natural ratio. Inline styles still win, so
+   deliberately fixed boxes (nav logo, card covers) are untouched. */
+img[width][height] { height: auto }
+
+/* ---------- 4. Gallery affordance ------------------------- */
+figure[data-lb] { cursor: zoom-in }
+figure[data-lb] img {
+  transition: transform .8s var(--e-ease), filter .5s ease;
+  will-change: transform;
+}
+@media (hover: hover) and (pointer: fine) { figure[data-lb]:hover img { transform: scale(1.035) } }
+figure[data-lb]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(4, 12, 17, .5), transparent 42%);
+  opacity: 0;
+  transition: opacity .4s ease;
+  pointer-events: none;
+}
+@media (hover: hover) and (pointer: fine) { figure[data-lb]:hover::after { opacity: 1 } }
+figure[data-lb] .e-fig-n {
+  position: absolute;
+  left: 12px;
+  bottom: 10px;
+  z-index: 2;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .14em;
+  color: #fff;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity .35s ease, transform .35s var(--e-ease);
+  pointer-events: none;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, .7);
+}
+@media (hover: hover) and (pointer: fine) { figure[data-lb]:hover .e-fig-n { opacity: 1; transform: none } }
+figure[data-lb]:focus-visible { outline: 2px solid var(--e-accent); outline-offset: 3px }
+
+/* Grid rows are authored as percentage widths, which would leave a 3-up row
+   at ~100px per image on a phone. Step them down instead. !important is
+   required because the widths are inline styles from the data. */
+@media (max-width: 1100px) {
+  figure[data-cols="5"] { width: calc(33.3333% - 10.67px) !important }
+}
+@media (max-width: 900px) {
+  figure[data-cols="3"], figure[data-cols="4"], figure[data-cols="5"] { width: calc(50% - 8px) !important }
+}
+@media (max-width: 520px) {
+  figure[data-cols="2"], figure[data-cols="3"], figure[data-cols="4"], figure[data-cols="5"] { width: 100% !important }
+}
+
+/* ---------- 4b. In-place transitions ----------------------
+   Frames of one cell stacked on top of each other, cross-fading every 2s.
+   The first frame stays in normal flow so it defines the cell's height. */
+figure[data-tran] { position: relative }
+figure[data-tran] .e-tran-layer {
+  transition: opacity .55s ease;
+  will-change: opacity;
+}
+figure[data-tran] .e-tran-layer:not(.e-tran-base) {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+figure[data-tran] .e-tran-base { position: relative; z-index: 0 }
+
+figure[data-tran] .e-tran-dots {
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  transform: translateX(-50%);
+  z-index: 3;
+  display: flex;
+  gap: 6px;
+  padding: 5px 9px;
+  border-radius: 100px;
+  background: rgba(6, 14, 19, .5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  opacity: 0;
+  transition: opacity .3s ease;
+}
+figure[data-tran]:focus-within .e-tran-dots { opacity: 1 }
+@media (hover: hover) and (pointer: fine) { figure[data-tran]:hover .e-tran-dots { opacity: 1 } }
+figure[data-tran] .e-tran-dots span {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .4);
+  cursor: pointer;
+  transition: background .25s, transform .25s;
+}
+figure[data-tran] .e-tran-dots span.on { background: var(--e-accent); transform: scale(1.25) }
+
+/* the hover zoom would reveal the frame underneath — keep transitions flat */
+@media (hover: hover) and (pointer: fine) { figure[data-tran]:hover img { transform: none !important } }
+
+@media (prefers-reduced-motion: reduce) {
+  figure[data-tran] .e-tran-layer { transition: none }
+  figure[data-tran] .e-tran-dots { opacity: 1 }   /* frames are switched by hand */
+}
+
+/* ---------- 4c. Video cells ------------------------------- */
+figure[data-video-cell] video { border-radius: inherit }
+
+/* ---------- 4d. Document viewer --------------------------- */
+.e-doc {
+  border: 1px solid rgba(255, 255, 255, .11);
+  border-radius: 12px;
+  background: #0e1c25;
+  overflow: hidden;
+  outline: none;
+}
+.e-doc:focus-visible { outline: 2px solid var(--e-accent); outline-offset: 3px }
+.e-doc .e-doc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, .09);
+}
+.e-doc .e-doc-title {
+  display: block;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  letter-spacing: -.01em;
+  color: var(--e-text);
+}
+.e-doc .e-doc-kind {
+  display: block;
+  font-size: 11.5px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--e-muted);
+  margin-top: 3px;
+}
+.e-doc .e-doc-dl {
+  flex: 0 0 auto;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--e-text) !important;
+  border: 1px solid var(--e-hairline);
+  border-radius: 100px;
+  padding: 8px 15px;
+  transition: border-color .25s, color .25s;
+}
+@media (hover: hover) and (pointer: fine) { .e-doc .e-doc-dl:hover { border-color: var(--e-accent); color: var(--e-accent) !important } }
+
+/* The stage is capped to the viewport so a tall page (the staff brochure is
+   portrait) sits whole on a laptop screen instead of running off top and
+   bottom. The page is centred and letterboxed rather than cropped. */
+.e-doc .e-doc-stage {
+  position: relative;
+  background: #0b1720;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+  max-height: 68vh;
+  padding: 14px;
+  cursor: zoom-in;
+}
+.e-doc .e-doc-stage img,
+.e-doc .e-doc-stage video {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  max-height: calc(68vh - 28px);
+  height: auto;
+  object-fit: contain;
+  border-radius: 4px;
+}
+.e-doc .e-doc-stage video { cursor: default }
+@media (max-width: 560px) {
+  .e-doc .e-doc-stage { max-height: 60vh; padding: 10px }
+  .e-doc .e-doc-stage img, .e-doc .e-doc-stage video { max-height: calc(60vh - 20px) }
+}
+
+/* ---------- 4d-i. Flipbook page-turn ----------------------
+   The resting page stays in normal flow — exactly like the plain
+   viewer — so the stage keeps sizing tightly to it (no letterboxing,
+   no cropping). Page changes are a straight cross-dissolve: the two
+   pages mid-turn are briefly pulled out of flow so they can overlap
+   and fade one into the other; the JS pins the stage's height for
+   that instant so removing the outgoing page from flow doesn't
+   collapse the box. */
+.e-doc-flip .e-doc-stage { overflow: hidden; touch-action: pan-y }
+.e-doc-flip .e-doc-stage img,
+.e-doc-flip .e-doc-stage video {
+  -webkit-user-drag: none;
+  user-select: none;
+}
+.e-doc-flip .e-doc-stage img.e-doc-page-out,
+.e-doc-flip .e-doc-stage video.e-doc-page-out,
+.e-doc-flip .e-doc-stage img.e-doc-page-in,
+.e-doc-flip .e-doc-stage video.e-doc-page-in {
+  position: absolute;
+  top: 50%; left: 50%;
+  max-width: calc(100% - 28px);
+  transform: translate(-50%, -50%);
+  transition: opacity .42s ease;
+}
+.e-doc-flip .e-doc-stage img.e-doc-page-in,
+.e-doc-flip .e-doc-stage video.e-doc-page-in { z-index: 1 }
+.e-doc-flip .e-doc-stage img.e-doc-page-out,
+.e-doc-flip .e-doc-stage video.e-doc-page-out { z-index: 2 }
+@media (max-width: 560px) {
+  .e-doc-flip .e-doc-stage img.e-doc-page-out, .e-doc-flip .e-doc-stage video.e-doc-page-out,
+  .e-doc-flip .e-doc-stage img.e-doc-page-in, .e-doc-flip .e-doc-stage video.e-doc-page-in { max-width: calc(100% - 20px) }
+}
+
+/* ---------- 4d-ii. Open-book reader ----------------------
+   Used by documents flagged "flip":"turn". Two facing pages and one leaf
+   rotating on the spine, all plain CSS over real <img> elements — the
+   browser rasterises those at full device resolution, so a 2000px page
+   shown at 500px stays crisp. (The previous version drew pages to a canvas
+   via a library that never multiplies by devicePixelRatio, which is what
+   made everything look soft and pixelated on a HiDPI screen.)
+
+   enhance.js sets .e-book's width and height in pixels from the viewport
+   budget, so the frame is a fixed two-page box that never changes size
+   between views — nothing shifts or resizes as you turn. */
+.e-book-host .e-book-stage {
+  position: relative;
+  background: #0b1720;
+  padding: clamp(10px, 2vw, 22px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.e-book {
+  position: relative;
+  display: flex;
+  perspective: 2600px;
+  filter: drop-shadow(0 24px 52px rgba(0, 0, 0, .5));
+  /* the centring slide for a lone cover/last page — same duration and
+     curve as the turning leaf, so the two read as one movement */
+  transition: transform .62s cubic-bezier(.42, .04, .28, 1);
+}
+@media (prefers-reduced-motion: reduce) { .e-book { transition: none } }
+/* A lone page is centred by sliding the whole two-page frame, which pushes
+   its empty half past the stage edge. Clip that horizontally so it can never
+   add a sideways scrollbar — but only horizontally: a turning leaf leans
+   toward the viewer and briefly overhangs top and bottom, and that must not
+   be cut off. */
+.e-book-host .e-book-stage { overflow-x: clip }
+
+/* One half of the spread. A half with no page (the cover's facing side, or
+   the back of an odd-page document) is left stage-coloured rather than
+   painted white — an empty space, not a blank sheet. */
+.e-book-side {
+  position: relative;
+  width: 50%;
+  height: 100%;
+  background: #0f1e28;
+  overflow: hidden;
+}
+.e-book-side.e-book-empty { background: transparent }
+.e-book-side img { width: 100%; height: 100%; object-fit: contain; display: block; user-select: none; -webkit-user-drag: none }
+/* a hairline down the spine so the two halves read as one bound object */
+.e-book-l { border-right: 1px solid rgba(0, 0, 0, .5) }
+.e-book-l.e-book-empty { border-right: 0 }
+
+/* The turning leaf: a two-sided card pinned to the spine. Each face hides
+   its own backface, which is what stops the mirrored page showing through
+   as it passes 90 degrees. */
+.e-book-leaf {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 50%;
+  height: 100%;
+  transform-origin: left center;
+  transform-style: preserve-3d;
+  z-index: 5;
+}
+.e-book-leaf.e-book-turning { transition: transform .62s cubic-bezier(.42, .04, .28, 1) }
+
+/* Single-page mode (phones): the book is one page wide, so the right half
+   becomes the whole book and the turning leaf spans all of it. */
+.e-book-single .e-book-l { display: none }
+.e-book-single .e-book-r { width: 100% }
+.e-book-single .e-book-leaf { left: 0; width: 100% }
+.e-book-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  background: #0f1e28;
+  overflow: hidden;
+}
+.e-book-face img { width: 100%; height: 100%; object-fit: contain; display: block }
+.e-book-back { transform: rotateY(180deg) }
+
+/* Click targets down either edge of the spread. They sit above the pages
+   but stay out of the way until the pointer is near them. */
+.e-book-edge {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: clamp(48px, 9%, 96px);
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  border: 0;
+  margin: 0;
+  padding: 0 10px;
+  background: none;
+  color: #fff;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity .25s ease;
+}
+.e-book-edge-l { left: 0; justify-content: flex-start; background: linear-gradient(to right, rgba(4, 10, 14, .45), transparent) }
+.e-book-edge-r { right: 0; justify-content: flex-end; background: linear-gradient(to left, rgba(4, 10, 14, .45), transparent) }
+.e-book-edge svg { filter: drop-shadow(0 1px 5px rgba(0, 0, 0, .6)) }
+.e-book-edge:focus-visible { opacity: 1; outline: 2px solid var(--e-accent); outline-offset: -3px }
+@media (hover: hover) and (pointer: fine) {
+  .e-book-host .e-book-stage:hover .e-book-edge { opacity: .9 }
+}
+@media (hover: none), (pointer: coarse) {
+  .e-book-edge { opacity: .55 }
+}
+/* nothing to turn at either end, so that edge goes quiet */
+.e-book-at-start .e-book-edge-l,
+.e-book-at-end .e-book-edge-r { opacity: 0 !important; pointer-events: none }
+
+.e-book-fullscreen .e-book-stage {
+  background: #05090c;
+  min-height: 100vh;
+  min-height: 100dvh;
+  align-items: center;
+}
+
+/* ---- tool buttons: zoom into the lightbox, or go fullscreen ---- */
+.e-book-tools { display: flex; gap: 8px; flex: 0 0 auto }
+.e-book-tool {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--e-hairline);
+  background: none;
+  color: var(--e-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: border-color .25s, color .25s;
+}
+@media (hover: hover) and (pointer: fine) { .e-book-tool:hover { border-color: var(--e-accent); color: var(--e-accent) } }
+.e-book-tool:focus-visible { outline: 2px solid var(--e-accent); outline-offset: 2px }
+
+/* ---- the page counter doubles as a jump-to-page control ---- */
+.e-doc-count {
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: color .2s;
+}
+@media (hover: hover) and (pointer: fine) { .e-doc-count:hover { color: var(--e-accent) } }
+.e-doc-count:focus-visible { outline: 2px solid var(--e-accent); outline-offset: 2px }
+.e-doc-count input {
+  width: 54px;
+  background: var(--e-surface);
+  border: 1px solid var(--e-accent);
+  border-radius: 6px;
+  color: var(--e-text);
+  font: inherit;
+  font-weight: 600;
+  text-align: center;
+  padding: 3px 2px;
+}
+.e-doc-bar button:disabled { opacity: .3; cursor: default; pointer-events: none }
+
+/* screen-reader-only page announcement — the canvas has no per-page alt
+   text, so a turn is heard here instead of read off an <img alt> */
+.e-book-sr {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---- "try me" hint: a label shown only while the book sits closed on its
+   cover, saying what to do with it. Removed the moment it's touched. ---- */
+.e-book-tip {
+  position: absolute;
+  left: 50%;
+  bottom: clamp(12px, 4%, 28px);
+  transform: translateX(-50%) translateY(6px);
+  z-index: 8;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 100px;
+  background: rgba(9, 20, 27, .82);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, .18);
+  color: #f2f6f7;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .45s ease, transform .45s var(--e-ease);
+}
+.e-book-hint .e-book-tip { opacity: 1; transform: translateX(-50%) }
+.e-book-tip i { font-style: normal; animation: eBookNudge 1.5s var(--e-ease) infinite }
+@keyframes eBookNudge { 0%, 100% { transform: translateX(0) } 50% { transform: translateX(4px) } }
+@media (prefers-reduced-motion: reduce) {
+  .e-book-tip i { animation: none !important }
+}
+
+@media (max-width: 700px) {
+  /* enhance.js already fits the book to the viewport in pixels; nothing to
+     clamp here beyond keeping the hint pill readable */
+  .e-book-tip { font-size: 10.5px; padding: 7px 12px }
+}
+
+/* Edge zones: hover (or touch) to reveal a flip cue on either side of
+   the page, so the gesture is discoverable without hunting for the
+   arrow bar underneath. The centre third stays clear for zoom-click. */
+.e-doc-flip .e-doc-zone {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 32%;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  border: none;
+  margin: 0;
+  padding: 0 10px;
+  background: none;
+  color: #fff;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity .25s ease, background .25s ease;
+}
+.e-doc-flip .e-doc-zone-l { left: 0; justify-content: flex-start; background: linear-gradient(to right, rgba(4, 10, 14, .38), transparent) }
+.e-doc-flip .e-doc-zone-r { right: 0; justify-content: flex-end; background: linear-gradient(to left, rgba(4, 10, 14, .38), transparent) }
+.e-doc-flip .e-doc-zone svg { filter: drop-shadow(0 1px 5px rgba(0, 0, 0, .55)) }
+.e-doc-flip .e-doc-zone:focus-visible { opacity: 1; outline: 2px solid var(--e-accent); outline-offset: -2px }
+@media (hover: hover) and (pointer: fine) {
+  .e-doc-flip .e-doc-stage:hover .e-doc-zone { opacity: 1 }
+}
+@media (hover: none), (pointer: coarse) {
+  .e-doc-flip .e-doc-zone { opacity: .5 }
+}
+
+/* While the auto-flip demo runs, a small pulsing "swipe" cue sits over
+   the page so the motion reads as an invitation, not just decoration. */
+.e-doc-demo .e-doc-stage::after {
+  content: 'swipe to browse';
+  position: absolute;
+  left: 50%; bottom: 14px;
+  transform: translateX(-50%);
+  z-index: 4;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 11px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: #fff;
+  background: rgba(4, 10, 14, .55);
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 100px;
+  padding: 6px 14px;
+  pointer-events: none;
+  animation: e-doc-cue 1.8s ease-in-out infinite;
+}
+@keyframes e-doc-cue {
+  0%, 100% { opacity: .55; transform: translateX(-50%) translateY(0) }
+  50% { opacity: 1; transform: translateX(-50%) translateY(-3px) }
+}
+@media (prefers-reduced-motion: reduce) {
+  .e-doc-flip .e-doc-stage img, .e-doc-flip .e-doc-stage video { transition: none !important }
+  .e-doc-demo .e-doc-stage::after { display: none }
+}
+
+.e-doc .e-doc-desc {
+  padding: 0 18px 14px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #a3b3ba;
+  border-bottom: 1px solid rgba(255, 255, 255, .09);
+  margin-bottom: 0;
+}
+
+.e-doc .e-doc-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 12px;
+  border-top: 1px solid rgba(255, 255, 255, .09);
+}
+.e-doc .e-doc-bar button {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--e-hairline);
+  background: none;
+  color: var(--e-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: border-color .25s, color .25s;
+}
+@media (hover: hover) and (pointer: fine) { .e-doc .e-doc-bar button:hover { border-color: var(--e-accent); color: var(--e-accent) } }
+.e-doc .e-doc-bar button:focus-visible { outline: 2px solid var(--e-accent); outline-offset: 3px }
+.e-doc .e-doc-count {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  color: var(--e-muted);
+  min-width: 86px;
+  text-align: center;
+}
+
+.e-doc .e-doc-strip {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 0 12px 12px;
+}
+.e-doc .e-doc-strip::-webkit-scrollbar { display: none }
+.e-doc .e-doc-strip button {
+  flex: 0 0 auto;
+  width: 54px; height: 40px;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid transparent;
+  background: var(--e-surface);
+  opacity: .4;
+  cursor: pointer;
+  padding: 0;
+  transition: opacity .25s, border-color .25s, transform .25s;
+  color: var(--e-muted);
+  font-size: 12px;
+}
+.e-doc .e-doc-strip button img { width: 100%; height: 100%; object-fit: cover; display: block }
+@media (hover: hover) and (pointer: fine) { .e-doc .e-doc-strip button:hover { opacity: .8 } }
+.e-doc .e-doc-strip button[aria-current="true"] {
+  opacity: 1; border-color: var(--e-accent); transform: translateY(-2px);
+}
+.e-doc .e-doc-strip button:focus-visible { outline: 2px solid var(--e-accent); outline-offset: 2px }
+.e-doc .e-doc-vthumb { display: flex; align-items: center; justify-content: center; width: 100%; height: 100% }
+
+@media (max-width: 560px) {
+  .e-doc .e-doc-head { padding: 12px 14px }
+  .e-doc .e-doc-strip button { width: 46px; height: 34px }
+}
+
+/* ---------- 4e. Client-3D index cards --------------------- */
+[data-t3d] { transition: transform .4s var(--e-ease), border-color .3s }
+@media (hover: hover) and (pointer: fine) { [data-t3d]:hover { transform: translateY(-4px); border-color: rgba(1, 212, 55, .5) } }
+@media (hover: hover) and (pointer: fine) { [data-t3d]:hover img { transform: scale(1.05) } }
+[data-t3d]:focus-visible { outline: 2px solid var(--e-accent); outline-offset: 3px }
+
+/* the group a #g= link points at, flashed briefly on arrival */
+@keyframes eGroupCue {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(1, 212, 55, 0) }
+  30%      { box-shadow: 0 0 0 3px rgba(1, 212, 55, .45) }
+}
+.e-group-cue { border-radius: 12px; animation: eGroupCue 1.6s ease-out 1 }
+@media (prefers-reduced-motion: reduce) { .e-group-cue { animation: none } }
+
+/* ---------- 5. Lightbox ----------------------------------- */
+#e-lb {
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  display: none;
+  background: rgba(6, 13, 18, .93);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  opacity: 0;
+  transition: opacity .32s ease;
+}
+#e-lb.open { display: block }
+#e-lb.shown { opacity: 1 }
+
+#e-lb .e-lb-stage {
+  position: absolute;
+  inset: 62px 16px 74px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#e-lb .e-lb-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 6px;
+  box-shadow: 0 40px 110px rgba(0, 0, 0, .7);
+  opacity: 0;
+  transform: scale(.97);
+  transition: opacity .34s ease, transform .34s var(--e-ease);
+  cursor: zoom-in;
+}
+#e-lb .e-lb-img.ready { opacity: 1; transform: none }
+#e-lb.zoomed .e-lb-stage { overflow: auto; align-items: flex-start; justify-content: flex-start }
+#e-lb.zoomed .e-lb-img {
+  max-width: none;
+  max-height: none;
+  width: auto;
+  cursor: zoom-out;
+  border-radius: 0;
+}
+
+/* top bar */
+#e-lb .e-lb-top {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 62px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 0 clamp(14px, 3vw, 26px);
+}
+#e-lb .e-lb-cap {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--e-muted);
+  letter-spacing: .04em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#e-lb .e-lb-cap b { color: var(--e-text); font-weight: 600 }
+#e-lb .e-lb-tools { display: flex; align-items: center; gap: 9px; flex: 0 0 auto }
+
+/* buttons */
+#e-lb .e-btn {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--e-hairline);
+  background: rgba(16, 34, 45, .8);
+  color: var(--e-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color .25s, color .25s, background .25s, transform .25s var(--e-ease);
+  flex: 0 0 auto;
+  padding: 0;
+}
+@media (hover: hover) and (pointer: fine) { #e-lb .e-btn:hover { border-color: var(--e-accent); color: var(--e-accent); transform: translateY(-2px) } }
+#e-lb .e-btn:focus-visible { outline: 2px solid var(--e-accent); outline-offset: 3px }
+#e-lb .e-btn[disabled] { opacity: .3; pointer-events: none }
+
+#e-lb .e-lb-prev, #e-lb .e-lb-next {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 52px; height: 52px;
+}
+#e-lb .e-lb-prev { left: clamp(10px, 2.4vw, 26px) }
+#e-lb .e-lb-next { right: clamp(10px, 2.4vw, 26px) }
+@media (hover: hover) and (pointer: fine) { #e-lb .e-lb-prev:hover, #e-lb .e-lb-next:hover { transform: translateY(-50%) scale(1.06) } }
+
+/* bottom rail */
+#e-lb .e-lb-bot {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 74px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 0 clamp(14px, 3vw, 26px);
+}
+#e-lb .e-lb-count {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  color: var(--e-text);
+  min-width: 92px;
+  text-align: center;
+}
+#e-lb .e-lb-count i { color: var(--e-muted); font-style: normal }
+#e-lb .e-lb-line {
+  flex: 1;
+  max-width: 320px;
+  height: 2px;
+  background: rgba(255, 255, 255, .13);
+  border-radius: 2px;
+  overflow: hidden;
+}
+#e-lb .e-lb-line span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--e-accent);
+  transition: width .35s var(--e-ease);
+}
+#e-lb .e-lb-hint {
+  font-size: 11px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: #63757c;
+  white-space: nowrap;
+}
+#e-lb kbd {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 10px;
+  border: 1px solid var(--e-hairline);
+  border-radius: 4px;
+  padding: 2px 5px;
+  color: var(--e-muted);
+}
+@media (max-width: 720px) {
+  #e-lb .e-lb-hint { display: none }
+  #e-lb .e-lb-prev, #e-lb .e-lb-next { width: 44px; height: 44px }
+  #e-lb .e-lb-stage { inset: 58px 8px 70px }
+}
+
+/* ---------- 6. Back to top -------------------------------- */
+#e-top {
+  position: fixed;
+  right: clamp(14px, 3vw, 26px);
+  bottom: clamp(14px, 3vw, 26px);
+  z-index: 150;
+  width: 46px; height: 46px;
+  border-radius: 50%;
+  border: 1px solid var(--e-hairline);
+  background: rgba(16, 34, 45, .82);
+  backdrop-filter: blur(12px);
+  color: var(--e-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(12px);
+  transition: opacity .35s, visibility .35s, transform .35s var(--e-ease),
+              border-color .25s, color .25s;
+  padding: 0;
+}
+#e-top.show { opacity: 1; visibility: visible; transform: none }
+@media (hover: hover) and (pointer: fine) { #e-top:hover { border-color: var(--e-accent); color: var(--e-accent) } }
+#e-top:focus-visible { outline: 2px solid var(--e-accent); outline-offset: 3px }
+
+/* ---------- 7. Skip link ---------------------------------- */
+.e-skip {
+  position: fixed;
+  top: 10px; left: 10px;
+  z-index: 9600;
+  padding: 11px 18px;
+  border-radius: 100px;
+  background: var(--e-accent);
+  color: var(--e-bg) !important;
+  font-weight: 700;
+  font-size: 13px;
+  transform: translateY(-160%);
+  transition: transform .25s var(--e-ease);
+}
+.e-skip:focus { transform: none }
+
+/* ---------- 8. Lightbox filmstrip -------------------------- */
+#e-lb .e-lb-strip {
+  position: absolute;
+  left: 0; right: 0; bottom: 74px;
+  height: 0;
+  overflow: hidden;
+  display: flex;
+  gap: 7px;
+  padding: 0 clamp(14px, 3vw, 26px);
+  align-items: center;
+  overflow-x: auto;
+  scrollbar-width: none;
+  transition: height .3s var(--e-ease), padding-bottom .3s var(--e-ease);
+}
+#e-lb .e-lb-strip::-webkit-scrollbar { display: none }
+#e-lb.strip .e-lb-strip { height: 66px; padding-bottom: 8px }
+#e-lb.strip .e-lb-stage { inset: 62px 16px 140px }
+#e-lb .e-lb-thumb {
+  flex: 0 0 auto;
+  width: 52px; height: 52px;
+  border-radius: 5px;
+  overflow: hidden;
+  border: 1px solid transparent;
+  opacity: .38;
+  cursor: pointer;
+  transition: opacity .25s, border-color .25s, transform .25s var(--e-ease);
+  background: var(--e-surface);
+  padding: 0;
+}
+#e-lb .e-lb-thumb img { width: 100%; height: 100%; object-fit: cover; display: block }
+@media (hover: hover) and (pointer: fine) { #e-lb .e-lb-thumb:hover { opacity: .8; transform: translateY(-3px) } }
+#e-lb .e-lb-thumb[aria-current="true"] {
+  opacity: 1;
+  border-color: var(--e-accent);
+  transform: translateY(-3px);
+}
+#e-lb .e-lb-thumb:focus-visible { outline: 2px solid var(--e-accent); outline-offset: 2px }
+@media (max-width: 720px) {
+  #e-lb.strip .e-lb-stage { inset: 58px 8px 132px }
+}
+
+/* ---------- 9. Command palette ---------------------------- */
+#e-cmd {
+  position: fixed;
+  inset: 0;
+  z-index: 9700;
+  display: none;
+  background: rgba(5, 11, 15, .72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  opacity: 0;
+  transition: opacity .2s ease;
+  padding: clamp(60px, 14vh, 140px) 16px 16px;
+}
+#e-cmd.open { display: block }
+#e-cmd.shown { opacity: 1 }
+#e-cmd .e-cmd-box {
+  max-width: 620px;
+  margin: 0 auto;
+  background: #0d1b24;
+  border: 1px solid rgba(255, 255, 255, .13);
+  border-radius: 14px;
+  box-shadow: 0 40px 100px rgba(0, 0, 0, .66);
+  overflow: hidden;
+  transform: translateY(-10px) scale(.98);
+  transition: transform .26s var(--e-ease);
+}
+#e-cmd.shown .e-cmd-box { transform: none }
+#e-cmd .e-cmd-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, .09);
+}
+#e-cmd .e-cmd-head svg { flex: 0 0 auto; color: var(--e-muted) }
+#e-cmd input {
+  flex: 1;
+  background: none;
+  border: 0;
+  outline: 0;
+  color: var(--e-text);
+  font-family: inherit;
+  font-size: 16px;
+  letter-spacing: .01em;
+}
+#e-cmd input::placeholder { color: #5f7178 }
+#e-cmd .e-cmd-esc {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  color: var(--e-muted);
+  border: 1px solid var(--e-hairline);
+  border-radius: 5px;
+  padding: 3px 7px;
+  flex: 0 0 auto;
+}
+#e-cmd .e-cmd-list { max-height: min(52vh, 420px); overflow-y: auto; padding: 8px }
+#e-cmd .e-cmd-group {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: #5f7178;
+  padding: 12px 12px 7px;
+}
+#e-cmd .e-cmd-item {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  width: 100%;
+  padding: 11px 12px;
+  border-radius: 9px;
+  border: 0;
+  background: none;
+  color: var(--e-text);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  font-size: 14.5px;
+  transition: background .16s;
+}
+#e-cmd .e-cmd-item .e-cmd-ico {
+  width: 30px; height: 30px;
+  flex: 0 0 auto;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, .06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--e-muted);
+  overflow: hidden;
+}
+#e-cmd .e-cmd-item .e-cmd-ico img { width: 100%; height: 100%; object-fit: cover }
+#e-cmd .e-cmd-item .e-cmd-txt { flex: 1; min-width: 0 }
+#e-cmd .e-cmd-item .e-cmd-sub {
+  display: block;
+  font-size: 11.5px;
+  color: var(--e-muted);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#e-cmd .e-cmd-item .e-cmd-go { opacity: 0; color: var(--e-accent); flex: 0 0 auto; font-size: 13px }
+#e-cmd .e-cmd-item[aria-selected="true"] { background: rgba(1, 212, 55, .11) }
+#e-cmd .e-cmd-item[aria-selected="true"] .e-cmd-ico { background: rgba(1, 212, 55, .17); color: var(--e-accent) }
+#e-cmd .e-cmd-item[aria-selected="true"] .e-cmd-go { opacity: 1 }
+#e-cmd .e-cmd-empty { padding: 30px 14px; text-align: center; color: var(--e-muted); font-size: 13.5px }
+#e-cmd .e-cmd-foot {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding: 11px 18px;
+  border-top: 1px solid rgba(255, 255, 255, .08);
+  font-size: 11px;
+  color: #5f7178;
+  letter-spacing: .05em;
+}
+#e-cmd .e-cmd-foot kbd {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  border: 1px solid var(--e-hairline);
+  border-radius: 4px;
+  padding: 2px 5px;
+  margin-right: 4px;
+  color: var(--e-muted);
+}
+
+/* the launcher pill */
+#e-cmd-btn {
+  position: fixed;
+  right: clamp(14px, 3vw, 26px);
+  bottom: calc(clamp(14px, 3vw, 26px) + 56px);
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 46px;
+  padding: 0 16px;
+  border-radius: 100px;
+  border: 1px solid var(--e-hairline);
+  background: rgba(16, 34, 45, .82);
+  backdrop-filter: blur(12px);
+  color: var(--e-muted);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color .25s, color .25s, transform .25s var(--e-ease);
+}
+@media (hover: hover) and (pointer: fine) { #e-cmd-btn:hover { border-color: var(--e-accent); color: var(--e-text); transform: translateY(-2px) } }
+#e-cmd-btn:focus-visible { outline: 2px solid var(--e-accent); outline-offset: 3px }
+#e-cmd-btn kbd {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 10.5px;
+  font-weight: 600;
+  border: 1px solid var(--e-hairline);
+  border-radius: 4px;
+  padding: 2px 6px;
+  color: var(--e-text);
+}
+@media (max-width: 720px) { #e-cmd-btn span { display: none } #e-cmd-btn { padding: 0 14px } }
+
+/* ---------- 9b. Film cards + video modal ------------------ */
+[data-film] { transition: transform .4s var(--e-ease), border-color .3s }
+@media (hover: hover) and (pointer: fine) { [data-film]:hover { transform: translateY(-4px); border-color: rgba(1, 212, 55, .5) } }
+@media (hover: hover) and (pointer: fine) { [data-film]:hover [data-fplay] { transform: translate(-50%, -50%) scale(1.12) } }
+[data-film]:focus-visible { outline: 2px solid var(--e-accent); outline-offset: 3px }
+
+#e-vid {
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  display: none;
+  background: rgba(5, 11, 15, .93);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  opacity: 0;
+  transition: opacity .28s ease;
+  padding: 16px;
+}
+#e-vid.open { display: flex; align-items: center; justify-content: center }
+#e-vid.shown { opacity: 1 }
+#e-vid .e-vid-inner {
+  width: min(1180px, 100%);
+  transform: scale(.97);
+  transition: transform .3s var(--e-ease);
+}
+#e-vid.shown .e-vid-inner { transform: none }
+#e-vid .e-vid-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+#e-vid .e-vid-title {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--e-text);
+  letter-spacing: -.01em;
+}
+#e-vid .e-vid-frame {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;
+  border: 1px solid var(--e-hairline);
+  box-shadow: 0 40px 110px rgba(0, 0, 0, .7);
+}
+#e-vid .e-vid-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0 }
+#e-vid .e-btn {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--e-hairline);
+  background: rgba(16, 34, 45, .8);
+  color: var(--e-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex: 0 0 auto;
+  padding: 0;
+  transition: border-color .25s, color .25s;
+}
+@media (hover: hover) and (pointer: fine) { #e-vid .e-btn:hover { border-color: var(--e-accent); color: var(--e-accent) } }
+#e-vid .e-btn:focus-visible { outline: 2px solid var(--e-accent); outline-offset: 3px }
+
+/* ---------- 10. Gallery group jump bar -------------------- */
+#e-groups {
+  position: sticky;
+  top: 58px;
+  z-index: 100;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 11px clamp(18px, 4vw, 56px);
+  margin-bottom: 8px;
+  background: rgba(11, 23, 32, .82);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(255, 255, 255, .07);
+}
+#e-groups::-webkit-scrollbar { display: none }
+#e-groups button {
+  flex: 0 0 auto;
+  border: 1px solid var(--e-hairline);
+  background: none;
+  color: #a3b3ba;
+  border-radius: 100px;
+  padding: 8px 15px;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color .25s, color .25s, background .25s;
+}
+@media (hover: hover) and (pointer: fine) { #e-groups button:hover { border-color: var(--e-accent); color: var(--e-text) } }
+#e-groups button[aria-current="true"] {
+  border-color: var(--e-accent);
+  background: rgba(1, 212, 55, .13);
+  color: var(--e-accent);
+}
+#e-groups button:focus-visible { outline: 2px solid var(--e-accent); outline-offset: 2px }
+#e-groups b { font-weight: 600; opacity: .55; margin-left: 6px }
+@media (pointer: coarse) {
+  #e-groups button { min-height: 44px; padding: 0 16px }
+  #e-lb .e-lb-thumb { width: 58px; height: 58px }
+  #e-lb.strip .e-lb-strip { height: 74px }
+  #e-lb.strip .e-lb-stage { inset: 58px 8px 148px }
+}
+
+/* ---------- 11. Nav scroll-spy ---------------------------- */
+nav [role="button"][data-spy] { position: relative }
+nav [role="button"][data-spy]::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -5px;
+  height: 1.5px;
+  background: var(--e-accent);
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  transition: transform .3s var(--e-ease);
+}
+nav [role="button"][data-spy].e-active { color: var(--e-text) !important }
+nav [role="button"][data-spy].e-active::after { transform: scaleX(1) }
+
+/* ---------- 12. Magnetic CTA + split text ----------------- */
+[data-mag] { will-change: transform }
+.e-split { display: inline-block; overflow: hidden; vertical-align: top }
+.e-split > span {
+  display: inline-block;
+  transform: translateY(105%);
+  animation: eSplitUp .9s var(--e-ease) forwards;
+}
+@keyframes eSplitUp { to { transform: none } }
+
+/* ---------- 13. Copy-to-clipboard toast ------------------- */
+#e-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 30px;
+  transform: translate(-50%, 20px);
+  z-index: 9800;
+  background: var(--e-accent);
+  color: var(--e-bg);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: .02em;
+  padding: 11px 20px;
+  border-radius: 100px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .3s, transform .3s var(--e-ease), visibility .3s;
+  box-shadow: 0 14px 40px rgba(1, 212, 55, .3);
+}
+#e-toast.show { opacity: 1; visibility: visible; transform: translate(-50%, 0) }
+
+.e-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-left: 12px;
+  padding: 7px 13px;
+  border-radius: 100px;
+  border: 1px solid var(--e-hairline);
+  background: none;
+  color: var(--e-muted);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  vertical-align: middle;
+  transition: border-color .25s, color .25s, transform .25s var(--e-ease);
+}
+@media (hover: hover) and (pointer: fine) { .e-copy:hover { border-color: var(--e-accent); color: var(--e-accent); transform: translateY(-2px) } }
+.e-copy:focus-visible { outline: 2px solid var(--e-accent); outline-offset: 3px }
+
+/* ---------- 14. Reduced motion ---------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  #e-grain { animation: none }
+  #e-cur, #e-cur-ring { display: none !important }
+  html.e-cursor-on, html.e-cursor-on * { cursor: auto !important }
+  #e-preload .e-pl-mark span { animation: none; opacity: 1; transform: none }
+  figure[data-lb]:hover img { transform: none }
+  .e-split > span { animation: none; transform: none }
+  [data-mag] { transform: none !important }
+}
+
+/* =========================================================
+   12. NATIVE ON PHONES
+   The platform layer: taps, press feedback, safe areas and the
+   mobile nav. Every rule is gated by capability, never by device.
+   ========================================================= */
+html {
+  -webkit-tap-highlight-color: transparent; /* the grey flash on every tap */
+  -webkit-text-size-adjust: 100%;           /* no font inflation in landscape */
+}
+/* click fires on touch-down instead of waiting out the double-tap zoom */
+a, button, [role="button"], summary, label { touch-action: manipulation }
+
+/* controls are not content: no text selection or callout on long-press */
+button, [role="button"], #e-cmd-btn, #e-top, #e-menu-btn,
+nav:has(> div > [data-resume]) a, nav:has(> div > [data-resume]) [role="button"] {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Touch has no hover, so give every control feedback the instant the
+   finger lands. Cards dim less than buttons: they are larger. */
+@media (hover: none), (pointer: coarse) {
+  button:active, [role="button"]:active, [data-resume]:active,
+  nav:has(> div > [data-resume]) a:active, .cat-row:active, #e-cmd-btn:active, #e-top:active {
+    opacity: .7;
+    transition: opacity 80ms ease-out;
+  }
+  [data-panel]:active, [data-card]:active, [data-t3d]:active, [data-film]:active {
+    opacity: .86;
+    transition: opacity 80ms ease-out;
+  }
+  /* a keyboard shortcut means nothing without a keyboard */
+  #e-cmd-btn kbd { display: none }
+  #e-cmd-btn { padding: 0; width: 46px; justify-content: center }
+  #e-cmd-btn span { display: none }
+  /* static texture over the work costs a full-screen layer on a phone */
+  #e-grain { display: none }
+}
+
+/* Edge-to-edge under the notch (viewport-fit=cover), with content
+   padded back out of the unsafe zones. */
+body {
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+nav:has(> div > [data-resume]) {
+  padding-top: calc(14px + env(safe-area-inset-top, 0px)) !important;
+  padding-left: max(clamp(18px, 4vw, 56px), env(safe-area-inset-left, 0px)) !important;
+  padding-right: max(clamp(18px, 4vw, 56px), env(safe-area-inset-right, 0px)) !important;
+}
+#e-top { bottom: calc(clamp(14px, 3vw, 26px) + env(safe-area-inset-bottom, 0px)) }
+#e-cmd-btn { bottom: calc(clamp(14px, 3vw, 26px) + 56px + env(safe-area-inset-bottom, 0px)) }
+
+/* scroll inside an overlay stays inside the overlay */
+#e-cmd .e-cmd-list, #e-lb .e-lb-stage { overscroll-behavior: contain }
+
+/* current page in the nav */
+nav:has(> div > [data-resume]) [aria-current="page"] { color: #f2f6f7 !important }
+
+/* ---------- mobile nav: one row, links in a sheet ----------
+   Under 720px the links row used to wrap under the logo and take
+   ~13% of the screen before any content. Now: logo, CV, menu. */
+#e-menu-btn { display: none }
+@media (max-width: 720px) {
+  .e-js nav:has(> div > [data-resume]) { flex-wrap: nowrap !important }
+  .e-js nav:has(> div > [data-resume]) > div:has(> [data-resume]) { flex-wrap: nowrap !important; margin-right: 52px }
+  .e-js nav:has(> div > [data-resume]) > div:has(> [data-resume]) > :not([data-resume]) { display: none !important }
+  #e-menu-btn {
+    display: flex;
+    position: fixed;
+    top: calc(12px + env(safe-area-inset-top, 0px));
+    right: max(clamp(10px, 3vw, 48px), env(safe-area-inset-right, 0px));
+    z-index: 130;
+    width: 44px; height: 44px;
+    align-items: center; justify-content: center;
+    border: 0; border-radius: 12px;
+    background: transparent;
+    color: #f2f6f7;
+    cursor: pointer;
+  }
+  #e-menu-btn svg { width: 22px; height: 22px }
+  #e-menu-btn .e-x { display: none }
+
+  /* open: the same links, re-laid as a sheet under the bar */
+  html.e-menu-open { overflow: hidden }
+  /* backdrop-filter makes the nav the containing block for fixed children,
+     which would trap the sheet inside the 69px bar; drop it while open */
+  html.e-menu-open.e-js nav:has(> div > [data-resume]) {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    background: #0b1720 !important;
+  }
+  html.e-menu-open #e-menu-btn .e-bars { display: none }
+  html.e-menu-open #e-menu-btn .e-x { display: block }
+  html.e-menu-open.e-js nav:has(> div > [data-resume]) > div:has(> [data-resume]) {
+    position: fixed;
+    top: var(--e-nav-h, 62px);
+    left: 0; right: 0; bottom: 0;
+    margin: 0;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    gap: 0 !important;
+    padding: 8px max(20px, env(safe-area-inset-left, 0px)) calc(24px + env(safe-area-inset-bottom, 0px));
+    background: #0b1720;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    animation: eSheetIn .22s cubic-bezier(.2, .8, .2, 1);
+  }
+  html.e-menu-open.e-js nav:has(> div > [data-resume]) > div:has(> [data-resume]) > * {
+    display: flex !important;
+    align-items: center;
+    min-height: 58px;
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    font-size: 24px !important;
+    font-weight: 600 !important;
+    letter-spacing: -.02em;
+    color: #f2f6f7 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, .08);
+  }
+  html.e-menu-open.e-js nav:has(> div > [data-resume]) > div:has(> [data-resume]) > [aria-current="page"] { color: #01d437 !important }
+  html.e-menu-open.e-js nav:has(> div > [data-resume]) > div:has(> [data-resume]) > [data-resume] {
+    justify-content: center;
+    min-height: 52px;
+    margin-top: 22px;
+    border-bottom: 0;
+    border-radius: 100px;
+    color: #0b1720 !important;
+    font-size: 16px !important;
+    font-family: inherit;
+    letter-spacing: .02em;
+  }
+  html.e-menu-open #e-cmd-btn, html.e-menu-open #e-top { visibility: hidden }
+}
+@keyframes eSheetIn { from { opacity: 0; transform: translateY(-8px) } }
+
+@media (prefers-reduced-motion: reduce) {
+  /* the marquee stops; everything else already honours this */
+  #site { --mq: paused !important }
+  html.e-menu-open.e-js nav:has(> div > [data-resume]) > div:has(> [data-resume]) { animation: none }
+}
