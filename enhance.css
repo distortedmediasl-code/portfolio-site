@@ -1439,3 +1439,133 @@ nav:has(> div > [data-resume]) [aria-current="page"] { color: #f2f6f7 !important
   #site { --mq: paused !important }
   html.e-menu-open.e-js nav:has(> div > [data-resume]) > div:has(> [data-resume]) { animation: none }
 }
+
+/* =========================================================
+   13. LONG GALLERY SECTIONS: highlights first, rest on request
+   ========================================================= */
+[data-arch-hide] { display: none !important }
+.e-arch-btn {
+  display: flex; align-items: center; gap: 9px;
+  margin: 22px auto 0;
+  padding: 13px 24px;
+  border-radius: 100px;
+  border: 1px solid var(--e-hairline);
+  background: rgba(16, 34, 45, .6);
+  color: var(--e-text);
+  font: 600 14.5px/1 'Space Grotesk', system-ui, sans-serif;
+  letter-spacing: -.01em;
+  cursor: pointer;
+  transition: border-color .25s, color .25s;
+}
+.e-arch-btn span { color: var(--e-accent) }
+@media (hover: hover) and (pointer: fine) {
+  .e-arch-btn:hover { border-color: var(--e-accent); color: var(--e-accent) }
+}
+.e-arch-btn:focus-visible { outline: 2px solid var(--e-accent); outline-offset: 3px }
+
+/* =========================================================
+   14. HOMEPAGE ON PHONES
+   The first project used to appear only after two full screens of
+   hero; the About section opened with a full-width portrait.
+   ========================================================= */
+@media (max-width: 720px) {
+  header:has(> [data-hero]) { min-height: 0 !important; padding-bottom: 32px !important }
+  header > [data-hero] { height: min(48vh, 360px) !important; min-height: 0 !important }
+  /* About: the words before the portrait, and a shorter portrait */
+  #about > div > div:first-child { order: 2 }
+  #about > div > div:last-child { order: 1 }
+  #about img[src*="My%20Dp"], #about img[src*="My Dp"] {
+    aspect-ratio: 4 / 3; object-fit: cover; object-position: 50% 22%;
+  }
+}
+
+/* =========================================================
+   15. SELECTED WORK: one spread per project
+   Replaces the sticky card stack. Each row is justified: images
+   grow by their own aspect ratio (set inline by make-spreads.js),
+   so a row shares one height and nothing is cropped.
+   ========================================================= */
+.e-spreads {
+  max-width: 1360px; margin: 0 auto;
+  padding: 0 clamp(18px, 4vw, 56px) clamp(40px, 6vh, 72px);
+  display: flex; flex-direction: column; gap: clamp(64px, 10vh, 112px);
+}
+.e-spread { display: block; color: #f2f6f7; text-decoration: none }
+.e-sp-head {
+  display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 16px clamp(24px, 4vw, 64px); align-items: end;
+  margin-bottom: clamp(18px, 2.6vh, 28px);
+}
+.e-sp-eyebrow {
+  display: flex; align-items: center; gap: 12px;
+  font-size: 11px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: #8b9ea6;
+}
+.e-sp-eyebrow b { font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 12px; font-weight: 600; letter-spacing: .1em; color: var(--a) }
+.e-sp-title {
+  font-family: 'Space Grotesk', system-ui, sans-serif; font-weight: 700;
+  font-size: clamp(28px, 3.4vw, 46px); letter-spacing: -.035em; line-height: 1.02;
+  margin: 12px 0 10px; text-wrap: balance;
+}
+.e-spread-lead .e-sp-title { font-size: clamp(32px, 4.4vw, 60px) }
+.e-sp-value {
+  font-family: 'Space Grotesk', system-ui, sans-serif; font-weight: 500;
+  font-size: clamp(15px, 1.4vw, 18px); line-height: 1.35; letter-spacing: -.015em;
+  color: #c8d4d8; max-width: 46ch; margin: 0;
+}
+.e-sp-side p { font-size: 14.5px; line-height: 1.62; color: #8b9ea6; max-width: 52ch; margin: 0 0 14px }
+/* the way in: a solid button, not an underlined link, so it reads as clickable */
+.e-sp-cta {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 13px 22px; border-radius: 100px;
+  background: var(--a); color: #0b1720;
+  font-family: 'Space Grotesk', system-ui, sans-serif; font-weight: 700; font-size: 15px; letter-spacing: -.01em;
+  white-space: nowrap;
+}
+.e-sp-cta span { color: #0b1720; transition: transform .3s cubic-bezier(.2, .8, .2, 1) }
+.e-sp-media { position: relative; display: flex; flex-direction: column; gap: 10px }
+/* hint over the work while the pointer is on it */
+.e-sp-hint {
+  position: absolute; right: 16px; bottom: 16px; z-index: 2;
+  padding: 10px 16px; border-radius: 100px;
+  background: rgba(11, 23, 32, .86); border: 1px solid rgba(255, 255, 255, .18);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  font-family: 'Space Grotesk', system-ui, sans-serif; font-weight: 600; font-size: 14px; color: #f2f6f7;
+  opacity: 0; transform: translateY(6px); pointer-events: none;
+  transition: opacity .25s ease, transform .25s ease;
+}
+/* closing bar: where one project ends, the way into it is repeated */
+.e-sp-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255, 255, 255, .1);
+  font-family: 'Space Grotesk', system-ui, sans-serif; font-weight: 600; font-size: 15px; color: #8b9ea6;
+}
+.e-sp-row { display: flex; gap: 10px; align-items: flex-start }
+.e-sp-img {
+  display: block; min-width: 0; height: auto; object-fit: cover;
+  border-radius: 8px; background: #0f1e28; border: 1px solid rgba(255, 255, 255, .06);
+}
+/* hover: the piece under the pointer stays bright, the rest step back */
+@media (hover: hover) and (pointer: fine) {
+  .e-sp-img { transition: filter .35s ease }
+  .e-sp-media:hover .e-sp-img { filter: brightness(.72) }
+  .e-sp-media:hover .e-sp-img:hover { filter: none }
+  .e-spread:hover .e-sp-cta span { transform: translateX(6px) }
+  .e-spread:hover .e-sp-hint { opacity: 1; transform: none }
+  .e-sp-cta { transition: box-shadow .3s ease }
+  .e-spread:hover .e-sp-cta { box-shadow: 0 10px 28px rgba(1, 212, 55, .28) }
+}
+.e-spread:focus-visible { outline: 2px solid var(--a); outline-offset: 10px; border-radius: 12px }
+@media (max-width: 720px) {
+  .e-sp-head { grid-template-columns: 1fr; align-items: start }
+  .e-sp-side { display: none }            /* the closing bar carries the button on phones */
+  .e-sp-hint { display: none }
+  .e-sp-foot { font-size: 14px }
+  .e-sp-foot > span:first-child { display: none }
+  .e-sp-foot .e-sp-cta { flex: 1; justify-content: center }
+  .e-sp-media { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: start }
+  .e-sp-row { display: contents }
+  .e-sp-img { width: 100% }
+  .e-sp-img.e-wide { grid-column: span 2 }
+  .e-sp-img.e-more { display: none }
+}
+@media (prefers-reduced-motion: reduce) { .e-sp-img, .e-sp-cta, .e-sp-cta span, .e-sp-hint { transition: none } }

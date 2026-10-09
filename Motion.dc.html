@@ -253,12 +253,25 @@ class Component extends DCLogic {
         if(window.matchMedia('(hover: hover) and (pointer: fine)').matches){
           /* preload started at 'none' for the mobile saving, so there is no
              data to play yet - load first, then play once the browser has
-             enough, otherwise play() rejects and the rail sits frozen. */
-          v.preload='metadata'; v.autoplay=true;
-          if(v.readyState===0) v.load();
-          const tryPlay=()=>{ const p=v.play(); if(p&&p.catch)p.catch(()=>{}); };
-          tryPlay();
-          v.addEventListener('canplay',tryPlay,{once:true});
+             enough, otherwise play() rejects and the rail sits frozen.
+             Each reel starts only when it nears the screen and pauses when it
+             leaves: autoplaying every reel at page load used to pull ~12 MB
+             before a visitor ever reached this section. */
+          const start=()=>{
+            v.preload='metadata'; v.autoplay=true;
+            if(v.readyState===0) v.load();
+            const tryPlay=()=>{ const p=v.play(); if(p&&p.catch)p.catch(()=>{}); };
+            tryPlay();
+            v.addEventListener('canplay',tryPlay,{once:true});
+          };
+          if(!('IntersectionObserver' in window)) start();
+          else if(!v.dataset.vio){
+            v.dataset.vio='1';
+            new IntersectionObserver(ents=>ents.forEach(e=>{
+              if(e.isIntersecting) start();
+              else if(!v.paused) v.pause();
+            }),{ rootMargin:'300px 0px' }).observe(v);
+          }
         }
         if(v.dataset.rb) return; v.dataset.rb='1';
         v.addEventListener('mouseenter',()=>{ this.muteAll(v); v.muted=false; this.syncBtn(v); });
