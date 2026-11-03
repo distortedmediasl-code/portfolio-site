@@ -81,7 +81,7 @@ img{display:block}
 <header style="max-width:1180px;margin:0 auto;padding:clamp(112px,15vh,160px) clamp(18px,4vw,56px) 0">
   <a href="Portfolio.dc.html#work" style="display:inline-flex;align-items:center;gap:9px;font-size:13px;font-weight:600;color:#8b9ea6;margin-bottom:clamp(28px,4vh,42px)" style-hover="color:#01d437">← All work</a>
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-    <span style="font-family:'Space Grotesk';font-size:12px;font-weight:600;color:var(--a);letter-spacing:.1em">05</span>
+    <span style="font-family:'Space Grotesk';font-size:12px;font-weight:600;color:var(--a);letter-spacing:.1em">06</span>
     <span style="width:26px;height:1px;background:rgba(255,255,255,.2)"></span>
     <span style="font-size:11.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:#8b9ea6">Personal project · Social · Motion</span>
   </div>
@@ -276,7 +276,7 @@ class Component extends DCLogic {
       resetArrange:()=>this.resetArrange(),
       groups: this.groups.map((g,gi)=>{
         const list=order[gi]||g.images;
-        return { name:g.name, count:(list.length?list.length+(list.length===1?' design':' designs'):''),
+        return { name:g.name, count:(n=>n?n+(n===1?' design':' designs'):'')(list.filter(x=>!(x&&x.tran)||/trans?[-_]?0*1\.\w+$/i.test(x.src)).length),
           images:list.map((im,i)=>{
             const s=(im&&im.src)||im; const sz=sizes[s];
             return { src:s, srcset:(im&&im.srcset)||'', sizes:(im&&im.sizes)||'', w: sz?(W[sz]||W.full):COLW(im&&im.cols),

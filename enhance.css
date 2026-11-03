@@ -1441,29 +1441,6 @@ nav:has(> div > [data-resume]) [aria-current="page"] { color: #f2f6f7 !important
 }
 
 /* =========================================================
-   13. LONG GALLERY SECTIONS: highlights first, rest on request
-   ========================================================= */
-[data-arch-hide] { display: none !important }
-.e-arch-btn {
-  display: flex; align-items: center; gap: 9px;
-  margin: 22px auto 0;
-  padding: 13px 24px;
-  border-radius: 100px;
-  border: 1px solid var(--e-hairline);
-  background: rgba(16, 34, 45, .6);
-  color: var(--e-text);
-  font: 600 14.5px/1 'Space Grotesk', system-ui, sans-serif;
-  letter-spacing: -.01em;
-  cursor: pointer;
-  transition: border-color .25s, color .25s;
-}
-.e-arch-btn span { color: var(--e-accent) }
-@media (hover: hover) and (pointer: fine) {
-  .e-arch-btn:hover { border-color: var(--e-accent); color: var(--e-accent) }
-}
-.e-arch-btn:focus-visible { outline: 2px solid var(--e-accent); outline-offset: 3px }
-
-/* =========================================================
    14. HOMEPAGE ON PHONES
    The first project used to appear only after two full screens of
    hero; the About section opened with a full-width portrait.
@@ -1569,3 +1546,16 @@ nav:has(> div > [data-resume]) [aria-current="page"] { color: #f2f6f7 !important
   .e-sp-img.e-more { display: none }
 }
 @media (prefers-reduced-motion: reduce) { .e-sp-img, .e-sp-cta, .e-sp-cta span, .e-sp-hint { transition: none } }
+
+/* ---------- 16. Brands strip on the homepage ---------- */
+.e-brands { display: flex; align-items: center; gap: clamp(20px, 3vw, 44px); padding: clamp(22px, 3.4vh, 34px) clamp(18px, 4vw, 56px); border-bottom: 1px solid rgba(255, 255, 255, .08) }
+.e-brands-label { flex: none; max-width: 112px; font-size: 11.5px; font-weight: 600; line-height: 1.45; letter-spacing: .14em; text-transform: uppercase; color: #8b9ea6 }
+.e-brands-view { flex: 1; min-width: 0; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent); mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent) }
+.e-brands-track { display: flex; width: max-content; animation: mq 46s linear infinite; animation-play-state: var(--mq, running) }
+.e-brands-set { display: flex; align-items: center; flex: none; gap: clamp(40px, 5vw, 76px); padding-right: clamp(40px, 5vw, 76px) }
+.e-brands-set img { display: block; flex: none; max-width: none }
+@media (hover: hover) and (pointer: fine) { .e-brands-view:hover .e-brands-track { animation-play-state: paused } }
+@media (max-width: 700px) {
+  .e-brands { flex-direction: column; align-items: stretch; gap: 16px; padding-left: 0; padding-right: 0 }
+  .e-brands-label { max-width: none; padding: 0 16px }
+}

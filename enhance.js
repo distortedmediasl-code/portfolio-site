@@ -1310,19 +1310,20 @@
      ========================================================= */
   /* Ordered to match the site: strongest and most recent first. */
   var PROJECTS = [
-    ['Home Care Plus', 'Brand Identity · Logo · Guidelines', 'Home-Care-Plus.dc.html', 'assets_web/projects/Infinity Hospitality/cover.webp'],
     ['Hi-Wash Designs', 'Social · Print · 3D', 'HiWash-Brand-Collateral.dc.html', 'assets_web/projects/hiwashwork/cover.webp'],
-    ['Skyora', 'Real Estate · Branding · Print', 'Skyora.dc.html', 'assets_web/projects/skyora/cover.webp'],
     ['Mr Valet', 'Branding · Social · 3D · Print', 'Mr-Valet.dc.html', 'assets_web/projects/Mr Valet/cover.webp'],
+    ['Al Sharqi Holding', 'Social · Stories · Company Profile', 'Al-Sharqi-Holding.dc.html', 'assets_web/projects/Al Sharqi/cover.webp'],
+    ['Skyora', 'Real Estate · Branding · Print', 'Skyora.dc.html', 'assets_web/projects/skyora/cover.webp'],
+    ['Home Care Plus', 'Brand Identity · Logo · Guidelines', 'Home-Care-Plus.dc.html', 'assets_web/projects/Infinity Hospitality/cover.webp'],
     ['Killian Social Media', 'Social Media', 'Killian-Social-Media.dc.html', 'assets_web/projects/killian/cover.webp']
   ];
 
   /* Browse-by-category pages: the same work indexed by discipline instead of
      by client. */
   var CATEGORIES = [
-    ['Social Media', '48 designs · 4 projects', 'Category-Social-Media.dc.html', 'assets_web/projects/killian/cover.webp'],
-    ['Print Designs', '36 designs · 3 documents', 'Category-Print-Designs.dc.html', 'assets_web/projects/hiwashwork/cover.webp'],
-    ['Company Profiles', '5 designs · 2 documents', 'Category-Company-Profiles.dc.html', 'assets_web/projects/skyora/cover.webp'],
+    ['Social Media', '98 designs · 5 projects', 'Category-Social-Media.dc.html', 'assets_web/projects/killian/cover.webp'],
+    ['Print Designs', '31 designs · 3 documents', 'Category-Print-Designs.dc.html', 'assets_web/projects/hiwashwork/cover.webp'],
+    ['Company Profiles', '7 designs · 3 documents', 'Category-Company-Profiles.dc.html', 'assets_web/projects/skyora/cover.webp'],
     ['Presentations', '1 concept deck', 'Category-Presentations.dc.html', 'assets_web/projects/Mr Valet/cover.webp'],
   ];
 
@@ -1963,50 +1964,6 @@
   }
 
   /* =========================================================
-     13. LONG GALLERY SECTIONS COLLAPSE
-     A section with 9+ pieces shows its first whole rows (at least 6
-     pieces on desktop, 4 on a phone) and puts the rest behind one
-     "Show all" button, so a case study reads as highlights first and
-     the full archive is one click away. Nothing is removed: the lightbox
-     still steps through every piece.
-     The hidden state is a data attribute rather than a class because the
-     component runtime owns each figure's className and would reset it.
-     ========================================================= */
-  var ARCH_MIN = 9;
-  function archive() {
-    $$('div[style*="flex-wrap"]').forEach(function (row) {
-      var figs = Array.prototype.filter.call(row.children, function (c) { return c.tagName === 'FIGURE'; });
-      if (figs.length < ARCH_MIN) return;
-      if (row.dataset.arch === String(figs.length)) return;   // already done for this render
-      row.dataset.arch = String(figs.length);
-
-      var want = window.innerWidth <= 720 ? 4 : 6;
-      var cut = figs.length, shown = 0, lastTop = null;
-      for (var i = 0; i < figs.length; i++) {
-        var top = figs[i].offsetTop;
-        if (top !== lastTop) {                      // a new row starts here
-          if (shown >= want) { cut = i; break; }
-          lastTop = top;
-        }
-        shown++;
-      }
-      if (figs.length - cut < 2) return;          // one leftover isn't worth a button
-
-      for (var k = cut; k < figs.length; k++) figs[k].setAttribute('data-arch-hide', '');
-      var btn = el('button', { type: 'button', class: 'e-arch-btn' },
-        'Show all ' + figs.length + ' pieces <span aria-hidden="true">&darr;</span>');
-      btn.addEventListener('click', function () {
-        figs.forEach(function (f) {
-          f.removeAttribute('data-arch-hide');
-          f.style.opacity = '1'; f.style.transform = 'none';
-        });
-        btn.remove();
-      });
-      row.parentNode.insertBefore(btn, row.nextSibling);
-    });
-  }
-
-  /* =========================================================
      BOOT — the component runtime renders asynchronously, so
      re-run the DOM-dependent parts whenever the tree changes.
      ========================================================= */
@@ -2027,7 +1984,6 @@
     mobileNav();
     navCurrent();
     revealSafety();
-    archive();
   }
 
   function boot() {

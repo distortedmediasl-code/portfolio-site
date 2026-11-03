@@ -86,11 +86,11 @@ img{display:block}
     <span style="font-size:11.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:#8b9ea6">Branding · Social · 3D · Print</span>
   </div>
   <h1 style="font-family:'Space Grotesk';font-weight:700;font-size:clamp(34px,6.4vw,74px);letter-spacing:-.045em;line-height:.98;margin-bottom:22px;max-width:900px">Mr Valet</h1>
-  <p style="font-size:clamp(17px,1.6vw,20px);line-height:1.62;color:#b2c1c8;max-width:680px">Mr Valet is a premium valet parking and hospitality brand across Qatar and the UAE, also under Al Sharqi Holdings. I designed its social media and print pieces, motion graphics and mock-up videos made to show how the work would actually be seen, and AI-generated 3D product concepts, including the perfume concept in the deck below.</p>
+  <p style="font-size:clamp(17px,1.6vw,20px);line-height:1.62;color:#b2c1c8;max-width:680px">Mr Valet is a premium valet parking and hospitality brand across Qatar and the UAE, also under Al Sharqi Holding. I designed its social media and print pieces, motion graphics and mock-up videos made to show how the work would actually be seen, and AI-generated 3D product concepts, including the perfume concept in the deck below.</p>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));margin:clamp(34px,5vh,48px) 0 clamp(30px,4vh,42px);border-top:1px solid rgba(255,255,255,.11);border-bottom:1px solid rgba(255,255,255,.11)">
     <div style="padding:20px 22px 20px 0">
       <div style="font-size:10.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:#7d8f97;margin-bottom:9px">Role</div>
-      <div style="font-size:14.5px;font-weight:500;color:#e3ebed;line-height:1.45">In-house designer · Al Sharqi Holdings</div>
+      <div style="font-size:14.5px;font-weight:500;color:#e3ebed;line-height:1.45">In-house designer · Al Sharqi Holding</div>
     </div>
     <div style="padding:20px 22px 20px 0">
       <div style="font-size:10.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:#7d8f97;margin-bottom:9px">Year</div>
@@ -413,6 +413,15 @@ img{display:block}
 
 
 
+
+
+
+
+
+
+
+
+
 <sc-if value="{{ arrangeOn }}" hint-placeholder-val="{{ false }}">
   <div style="position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:180;display:flex;align-items:center;gap:14px;padding:11px 16px;border-radius:100px;background:rgba(9,20,27,.92);border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(14px);box-shadow:0 18px 44px rgba(0,0,0,.5)">
     <span style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:#dbe5e8"><span style="width:7px;height:7px;border-radius:50%;background:var(--a)"></span>Arrange mode</span>
@@ -428,10 +437,10 @@ img{display:block}
       <h3 style="font-family:'Space Grotesk';font-weight:700;font-size:clamp(22px,2.8vw,32px);letter-spacing:-.035em;line-height:1.04">Hi-Wash Designs</h3>
       <div style="font-size:13.5px;color:#8b9ea6;margin-top:8px">Social · Print · 3D</div>
     </a>
-    <a href="Skyora.dc.html" data-card="" style="display:block;color:#f2f6f7;text-align:right">
+    <a href="Al-Sharqi-Holding.dc.html" data-card="" style="display:block;color:#f2f6f7;text-align:right">
       <div style="font-size:10.5px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:#7d8f97;margin-bottom:12px">Next →</div>
-      <h3 style="font-family:'Space Grotesk';font-weight:700;font-size:clamp(22px,2.8vw,32px);letter-spacing:-.035em;line-height:1.04">Skyora</h3>
-      <div style="font-size:13.5px;color:#8b9ea6;margin-top:8px">Key Visuals · Print · Social</div>
+      <h3 style="font-family:'Space Grotesk';font-weight:700;font-size:clamp(22px,2.8vw,32px);letter-spacing:-.035em;line-height:1.04">Al Sharqi Holding</h3>
+      <div style="font-size:13.5px;color:#8b9ea6;margin-top:8px">Social · Stories · Company Profile</div>
     </a>
   </div>
   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-top:clamp(40px,6vh,64px);padding-top:24px;border-top:1px solid rgba(255,255,255,.09)">
@@ -511,7 +520,7 @@ class Component extends DCLogic {
       resetArrange:()=>this.resetArrange(),
       groups: this.groups.map((g,gi)=>{
         const list=order[gi]||g.images;
-        return { name:g.name, blurb:g.blurb||'', hasDoc:!!g.doc, docJson:g.doc?JSON.stringify(g.doc):'', count:(list.length?list.length+(list.length===1?' design':' designs'):''),
+        return { name:g.name, blurb:g.blurb||'', hasDoc:!!g.doc, docJson:g.doc?JSON.stringify(g.doc):'', count:(n=>n?n+(n===1?' design':' designs'):'')(list.filter(x=>!(x&&x.tran)||/trans?[-_]?0*1\.\w+$/i.test(x.src)).length),
           images:list.map((im,i)=>{
             const s=(im&&im.src)||im; const sz=sizes[s];
             return { src:s, srcset:(im&&im.srcset)||'', sizes:(im&&im.sizes)||'', w: sz?(W[sz]||W.full):COLW(im&&im.cols),
