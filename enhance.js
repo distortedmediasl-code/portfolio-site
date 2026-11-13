@@ -538,7 +538,10 @@
        lone final page when the count leaves one over. Leaf t carries page
        2t-1 on the left and 2t on the right, which makes t=0 the cover (right
        side only) and the last leaf the inside back. */
-    var lastLeaf = Math.floor(count / 2); // highest leaf that still carries a page:
+    /* S shifts the page pairing. 0 is a real book: the cover alone, then
+       2-3, 4-5 and so on. 1 would open straight onto pages 1-2. */
+    var S = 0;
+    var lastLeaf = Math.floor((count - S) / 2); // highest leaf that still carries a page:
                                         // an even count ends on a lone LEFT page (leaf count/2),
                                         // an odd one ends on a right page (leaf (count-1)/2)
     var turned = 0;
@@ -552,10 +555,10 @@
     var single = false;
     var solo = 0;
     var natW = cfg.w || 0, natH = cfg.h || 0;
-    var leftAt  = function (t) { return t > 0 ? pages[2 * t - 1] : null; };
-    var rightAt = function (t) { return pages[2 * t] || null; };
-    var idxOf   = function (t) { return rightAt(t) ? 2 * t : (leftAt(t) ? 2 * t - 1 : 0); };
-    var leafOf  = function (i) { return i <= 0 ? 0 : Math.floor((i + 1) / 2); };
+    var leftAt  = function (t) { return 2 * t - 1 + S >= 0 ? (pages[2 * t - 1 + S] || null) : null; };
+    var rightAt = function (t) { return pages[2 * t + S] || null; };
+    var idxOf   = function (t) { return leftAt(t) ? 2 * t - 1 + S : (rightAt(t) ? 2 * t + S : 0); };
+    var leafOf  = function (i) { return Math.max(0, Math.floor((i + 1 - S) / 2)); };
     /* The page actually on screen. In single-page mode `turned` goes stale
        (only `solo` moves), so anything that needs "the current page" must ask
        here — reading idxOf(turned) directly sent the magnifier to page 1
@@ -617,14 +620,41 @@
     /* Only the pages in play are fetched, so opening a case study doesn't
        pull the whole document down the wire; neighbours are warmed a leaf
        ahead so a turn never reveals an empty page. */
-    var warmed = {};
+    /* Pages are decoded, not just downloaded, before a turn uses them: a
+       page that is fetched but undecoded paints blank for a frame, and that
+       flash was half of what made the old turn feel jumpy. */
+    var decoded = {};
+    function decodeSrc(src) {
+      if (!src) return Promise.resolve();
+      if (!decoded[src]) {
+        var im = new Image();
+        im.decoding = 'async';
+        im.src = src;
+        decoded[src] = (im.decode ? im.decode() : new Promise(function (ok) { im.onload = ok; }))
+          .catch(function () {});
+      }
+      return decoded[src];
+    }
     function warm(t) {
       for (var i = 2 * t - 2; i <= 2 * t + 3; i++) {
-        if (i < 0 || i >= count || warmed[i]) continue;
-        warmed[i] = true;
-        var im = new Image();
-        im.src = pages[i];
+        if (i >= 0 && i < count) decodeSrc(pages[i]);
       }
+    }
+    /* Each half keeps one <img> for its whole life and only its src changes,
+       so a settled turn never tears down and re-decodes a page already on
+       screen. */
+    function setSide(side, src, n) {
+      var img = side.querySelector('img');
+      side.classList.toggle('e-book-empty', !src);
+      if (!src) { if (img) img.remove(); return; }
+      if (!img) {
+        img = document.createElement('img');
+        img.draggable = false;
+        img.decoding = 'async';
+        side.insertBefore(img, side.firstChild);
+      }
+      if (img.getAttribute('src') !== src) img.setAttribute('src', src);
+      if (n) img.alt = (cfg.title ? cfg.title + ' — ' : '') + 'page ' + n;
     }
 
     function pageImg(src, n) {
@@ -648,6 +678,12 @@
        During a turn the slide runs with the same duration and curve as the
        leaf, so opening the cover is one motion — the book glides open as the
        page swings — never a separate jump after the page has landed. */
+    /* A lone page (the cover, or the back page) fills only half the frame, so
+       the book is shifted half a page to sit it in the middle. The shift is
+       driven by the same turn progress as the page itself, so opening the
+       cover is one movement: the book glides to centre while the page swings.
+       It is a plain transform with no filter on the book, so it costs nothing
+       to animate (a drop-shadow filter here is what used to make it judder). */
     function offsetFor(t) {
       if (single) return 0;
       var l = leftAt(t), r = rightAt(t);
@@ -667,22 +703,20 @@
         cur = solo;
       } else {
         l = leftAt(turned); r = rightAt(turned);
-        from = l ? 2 * turned : (r ? 2 * turned + 1 : 1);
-        to = r ? 2 * turned + 1 : from;
+        from = l ? 2 * turned + S : (r ? 2 * turned + 1 + S : 1);
+        to = r ? 2 * turned + 1 + S : from;
         cur = idxOf(turned);
       }
-      sideL.innerHTML = pageImg(l, from);
-      sideR.innerHTML = pageImg(r, to);
       // an absent half stays empty and stage-coloured — never a white sheet
-      sideL.classList.toggle('e-book-empty', !l);
-      sideR.classList.toggle('e-book-empty', !r);
+      setSide(sideL, l, from);
+      setSide(sideR, r, to);
 
       countBtn.textContent = (from === to ? pad(from) : pad(from) + '–' + pad(to)) + ' / ' + pad(count);
       sr.textContent = 'Page ' + from + (from === to ? '' : ' and ' + to) + ' of ' + count +
         (cfg.title ? ', ' + cfg.title : '');
 
       stripBtns.forEach(function (b, k) {
-        var on = single ? k === solo : ((l && k === 2 * turned - 1) || (r && k === 2 * turned));
+        var on = single ? k === solo : ((l && k === 2 * turned - 1 + S) || (r && k === 2 * turned + S));
         b.setAttribute('aria-current', on ? 'true' : 'false');
         b.tabIndex = k === cur ? 0 : -1;
       });
@@ -722,6 +756,8 @@
 
       /* Flip between spread and single-page when the viewport crosses the
          threshold, carrying the reading position across so nothing jumps. */
+      // wide pages get a larger page cap so an open spread still reads
+      var landscape = natW > natH * 1.05;
       var wantSingle = window.innerWidth <= SINGLE_AT && !full;
       if (wantSingle !== single) {
         if (wantSingle) solo = idxOf(turned);
@@ -731,7 +767,7 @@
       }
 
       var perPage = single ? avail : avail / 2;
-      var capW = Math.min(full ? 900 : 560, perPage);
+      var capW = Math.min(landscape ? (full ? 1000 : 700) : (full ? 900 : 560), perPage);
       var pageW = Math.max(150, Math.round(Math.min(capW, budgetH * natW / natH)));
       var pageH = Math.round(pageW * natH / natW);
       book.style.width = (single ? pageW : pageW * 2) + 'px';
@@ -742,71 +778,163 @@
     /* One leaf, rotating on the spine. In single-page mode the leaf is the
        whole book rather than half of it (see the CSS), and it steps one page
        instead of one spread — otherwise the mechanics are identical. */
-    function go(d) {
-      if (busy) return;
-      var fwd = d > 0;
-      var to, frontSrc, backSrc, underL, underR;
+    /* A turn is described by p, its progress from 0 (not started) to 1
+       (landed). Button turns animate p from 0 to 1; a drag sets p from the
+       pointer, so the page follows the finger and can be let go either way.
+       Both paths share applyTurn, so a dragged turn and a clicked one look
+       identical. TURN_MS sits between AnyFlip's snap and a sluggish crawl. */
+    var TURN_MS = 850;
+    var EASE = 'cubic-bezier(.45, .05, .2, 1)';
 
+    function turnInfo(d) {
+      var fwd = d > 0, to, front, back, underL, underR;
       if (single) {
         to = solo + d;
-        if (to < 0 || to > count - 1) return;
-        frontSrc = pages[solo];
-        backSrc = pages[to];
+        if (to < 0 || to > count - 1) return null;
+        // forward lifts the current page away; back lays the previous one down
+        front = fwd ? pages[solo] : pages[to];
+        back = fwd ? pages[to] : pages[solo];
         underL = null;
-        underR = pages[to];
+        underR = fwd ? pages[to] : pages[solo];
       } else {
         to = turned + d;
-        if (to < 0 || to > lastLeaf) return;
-        frontSrc = fwd ? pages[2 * turned]     : pages[2 * turned - 2];
-        backSrc  = fwd ? pages[2 * turned + 1] : pages[2 * turned - 1];
-        underL   = fwd ? leftAt(turned)        : leftAt(to);
-        underR   = fwd ? rightAt(to)           : rightAt(turned);
+        if (to < 0 || to > lastLeaf) return null;
+        front  = fwd ? pages[2 * turned + S]     : pages[2 * turned - 2 + S];
+        back   = fwd ? pages[2 * turned + 1 + S] : pages[2 * turned - 1 + S];
+        underL = fwd ? leftAt(turned)        : leftAt(to);
+        underR = fwd ? rightAt(to)           : rightAt(turned);
       }
-      dropHint();
+      return { fwd: fwd, to: to, front: front, back: back, underL: underL, underR: underR };
+    }
 
-      if (REDUCED || !frontSrc) {
-        if (single) solo = to; else turned = to;
+
+    /* Lays the turn out at p = 0 without animating: the halves underneath
+       already show the post-turn spread, and the leaf covering them shows the
+       page being turned, so nothing visibly changes until the leaf moves. */
+    /* Resolves once every <img> given (or inside the elements given) is
+       decoded and ready to paint, or after a short limit, whichever is first.
+       Swapping a picture that is not ready yet shows the old one for a frame:
+       that one-frame flash is what made a turn look like it snapped. */
+    function imgsReady(list) {
+      var imgs = [];
+      list.forEach(function (n) {
+        if (!n) return;
+        if (n.tagName === 'IMG') imgs.push(n); else imgs = imgs.concat($$('img', n));
+      });
+      var all = Promise.all(imgs.map(function (i) {
+        return i.decode ? i.decode().catch(function () {}) : Promise.resolve();
+      }));
+      return Promise.race([all, new Promise(function (ok) { setTimeout(ok, 400); })]);
+    }
+
+    function buildTurn(info) {
+      var leaf = el('div', { class: 'e-book-leaf' },
+        '<div class="e-book-face e-book-front">' + pageImg(info.front, 0) + '<i class="e-book-shade"></i></div>' +
+        '<div class="e-book-face e-book-back">' + pageImg(info.back, 0) + '<i class="e-book-shade"></i></div>');
+      leaf.style.visibility = 'hidden';
+      book.appendChild(leaf);
+      var shades = $$('.e-book-shade', leaf);
+      // the face that turns away darkens; the face that lands brightens
+      var st = { info: info, fwd: info.fwd, leaf: leaf, leave: shades[info.fwd ? 0 : 1], arrive: shades[info.fwd ? 1 : 0], casts: [],
+        offA: offsetFor(turned), offB: single ? 0 : offsetFor(info.to) };
+      return st;
+    }
+
+    /* Puts the post-turn pages underneath and reveals the leaf at its start
+       angle, all in one frame. Whichever half changes is the half the leaf is
+       covering at that moment, so nothing visibly changes yet. */
+    function showTurn(st) {
+      var info = st.info;
+      setSide(sideL, info.underL, 0);
+      setSide(sideR, info.underR, 0);
+      animTo(st, 0, 0);
+      st.leaf.style.visibility = '';
+    }
+
+    function applyTurn(st, p) {
+      var a = st.fwd ? -180 * p : -180 + 180 * p;
+      st.leaf.style.transform = 'rotateY(' + a.toFixed(2) + 'deg)';
+      if (st.offA !== st.offB) {
+        var off = st.offA + (st.offB - st.offA) * p;
+        book.style.transform = off ? 'translateX(' + off.toFixed(3) + '%)' : '';
+      }
+      /* One page at a time has nowhere for a turned page to rest: it would
+         land flat beside the book as a mirrored copy. It fades as it goes
+         past the spine instead, so only the page being read is ever shown. */
+      if (single) {
+        var q = st.fwd ? p : 1 - p;
+        st.leaf.style.opacity = q < .55 ? '1' : Math.max(0, (1 - q) / .45).toFixed(3);
+      }
+      st.leave.style.opacity = (.3 * p).toFixed(3);
+      st.arrive.style.opacity = (.25 * (1 - p)).toFixed(3);
+      st.casts.forEach(function (c) { c.el.style.opacity = (c.a + (c.b - c.a) * p).toFixed(3); });
+    }
+
+    /* Moves a turn to p over ms. The start state is committed and forced to
+       take before the transition is set, so the turn still runs where frame
+       callbacks are throttled; a timeout backs up a missing transitionend. */
+    function animTo(st, p, ms, cb) {
+      var els = [st.leaf, st.leave, st.arrive].concat(st.casts.map(function (c) { return c.el; }));
+      if (st.offA !== st.offB) els.push(book);
+      var tr = ms ? 'transform ' + ms + 'ms ' + EASE + ', opacity ' + ms + 'ms ' + EASE : 'none';
+      els.forEach(function (e2) { e2.style.transition = tr; });
+      var fired = false;
+      function fin() { if (fired) return; fired = true; if (cb) cb(); }
+      if (!ms) {
+        /* Jump straight to p and FLUSH it, so the next animated call starts
+           from here. Flushing before applying (as this used to) left a back
+           turn's start angle of -180 uncommitted: the browser then saw the
+           turn as -180 to 0 already done, and the page snapped instead of
+           flipping. Forward turns hid the bug because they start at 0, the
+           default. */
+        applyTurn(st, p);
+        void st.leaf.offsetWidth;
+        return fin();
+      }
+      applyTurn(st, p);
+      st.leaf.addEventListener('transitionend', function h(e) {
+        if (e.target !== st.leaf || e.propertyName !== 'transform') return;
+        st.leaf.removeEventListener('transitionend', h);
+        fin();
+      });
+      setTimeout(fin, ms + 400);
+    }
+
+    /* State is committed first, then painted: the halves already hold the
+       right pages, so removing the leaf changes nothing on screen. */
+    function endTurn(st, commit) {
+      if (commit) { if (single) solo = st.info.to; else turned = st.info.to; }
+      book.style.transition = '';
+      paint(); // the leaf still covers the half whose picture just changed
+      imgsReady([sideL, sideR]).then(function () {
+        if (st.leaf.parentNode) st.leaf.remove();
+        st.casts.forEach(function (c) { c.el.style.transition = 'none'; c.el.style.opacity = '0'; });
+        busy = false;
+      });
+    }
+
+    function go(d) {
+      if (busy) return;
+      var info = turnInfo(d);
+      if (!info) return;
+      dropHint();
+      if (REDUCED || !info.front) {
+        if (single) solo = info.to; else turned = info.to;
         paint();
         return;
       }
-
       busy = true;
-      // the book slides to its destination centring alongside the leaf
-      if (!single) applyOffset(offsetFor(to), true);
-      // the halves underneath are already the post-turn spread
-      sideL.innerHTML = pageImg(underL, 0);
-      sideR.innerHTML = pageImg(underR, 0);
-      sideL.classList.toggle('e-book-empty', !underL);
-      sideR.classList.toggle('e-book-empty', !underR);
-
-      var leaf = el('div', { class: 'e-book-leaf' },
-        '<div class="e-book-face e-book-front">' + pageImg(frontSrc, 0) + '</div>' +
-        '<div class="e-book-face e-book-back">' + pageImg(backSrc, 0) + '</div>');
-      book.appendChild(leaf);
-
-      /* Commit the start angle, force it to take, then transition — starting
-         from a committed value rather than a frame callback means the turn
-         still runs where requestAnimationFrame is throttled. */
-      leaf.style.transform = fwd ? 'rotateY(0deg)' : 'rotateY(-180deg)';
-      void leaf.offsetWidth;
-      leaf.classList.add('e-book-turning');
-      leaf.style.transform = fwd ? 'rotateY(-180deg)' : 'rotateY(0deg)';
-
-      var done = false;
-      function settle() {
-        if (done) return;
-        done = true;
-        if (leaf.parentNode) leaf.remove();
-        if (single) solo = to; else turned = to;
-        paint();
-        busy = false;
-      }
-      leaf.addEventListener('transitionend', function fin(e) {
-        if (e.propertyName !== 'transform') return;
-        leaf.removeEventListener('transitionend', fin);
-        settle();
+      // wait for every page the turn shows to be decoded, but never long
+      var ready = Promise.all([info.front, info.back, info.underL, info.underR].map(decodeSrc));
+      Promise.race([ready, new Promise(function (ok) { setTimeout(ok, 700); })]).then(function () {
+        var st = buildTurn(info);
+        imgsReady([st.leaf]).then(function () {
+          showTurn(st);
+          return imgsReady([sideL, sideR]);
+        }).then(function () {
+          animTo(st, 1, TURN_MS, function () { endTurn(st, true); });
+        });
       });
-      setTimeout(settle, 1200); // safety net if transitionend never arrives
     }
 
     /* Takes a PAGE index, so callers (thumbnails, Home/End, the page-number
@@ -872,16 +1000,60 @@
       else if (e.key === 'Escape' && document.fullscreenElement === host) { document.exitFullscreen(); }
     });
 
-    // swipe / drag across the spread
-    var dragX = null;
-    book.addEventListener('pointerdown', function (e) { dragX = e.clientX; });
-    book.addEventListener('pointerup', function (e) {
-      if (dragX === null) return;
-      var dx = e.clientX - dragX;
-      dragX = null;
-      if (Math.abs(dx) > 45) go(dx < 0 ? 1 : -1);
+    /* Drag a page to turn it, the way a real flip-book works: the leaf
+       follows the pointer, and letting go past about a third of the way (or
+       with a quick flick) finishes the turn, otherwise the page falls back.
+       On a spread, a page only turns from its own half: pull the right page
+       left to go forward, the left page right to go back. */
+    var drag = null;
+    book.addEventListener('pointerdown', function (e) {
+      if (busy || e.button > 0) return;
+      dropHint();
+      var r = book.getBoundingClientRect();
+      drag = { id: e.pointerId, x: e.clientX, y: e.clientY, lastX: e.clientX, lastT: e.timeStamp, vx: 0, p: 0,
+        right: e.clientX > r.left + r.width / 2, w: single ? r.width : r.width / 2, st: null };
     });
-    book.addEventListener('pointercancel', function () { dragX = null; });
+    book.addEventListener('pointermove', function (e) {
+      if (!drag || e.pointerId !== drag.id) return;
+      var dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+      if (!drag.st) {
+        if (Math.abs(dy) > 14 && Math.abs(dy) > Math.abs(dx)) { drag = null; return; } // a scroll, not a turn
+        if (Math.abs(dx) < 10) return;
+        var d = dx < 0 ? 1 : -1;
+        var info = turnInfo(d);
+        if (!info || !info.front || REDUCED) { drag = null; return; }
+        busy = true;
+        drag.st = buildTurn(info);
+        showTurn(drag.st);
+        try { book.setPointerCapture(e.pointerId); } catch (x) {}
+      }
+      drag.p = Math.max(0, Math.min(1, Math.abs(dx) / (drag.w * 1.15)));
+      var dt = Math.max(1, e.timeStamp - drag.lastT);
+      drag.vx = (e.clientX - drag.lastX) / dt;
+      drag.lastX = e.clientX; drag.lastT = e.timeStamp;
+      applyTurn(drag.st, drag.p);
+    });
+    function release() {
+      if (!drag) return;
+      var g = drag;
+      drag = null;
+      if (!g.st) {
+        /* A tap, not a drag: tap the left page to go back and the right page
+           to go forward. On one page at a time, the left third goes back. */
+        if (!busy && Math.abs(g.lastX - g.x) < 8) {
+          var r2 = book.getBoundingClientRect();
+          var back = single ? g.x < r2.left + r2.width * .3 : !g.right;
+          go(back ? -1 : 1);
+        }
+        return;
+      }
+      var flick = g.st.fwd ? g.vx < -.45 : g.vx > .45;
+      var commit = g.p > .33 || flick;
+      var ms = Math.max(220, Math.round(TURN_MS * (commit ? 1 - g.p : g.p)));
+      animTo(g.st, commit ? 1 : 0, ms, function () { endTurn(g.st, commit); });
+    }
+    book.addEventListener('pointerup', release);
+    book.addEventListener('pointercancel', release);
     host.addEventListener('pointerdown', dropHint);
 
     var rt = null;

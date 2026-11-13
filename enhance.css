@@ -361,16 +361,20 @@ figure[data-video-cell] video { border-radius: inherit }
   justify-content: center;
   align-items: center;
 }
+/* No filter on the book: a drop-shadow filter over a 3D scene is redrawn on
+   every frame of a turn, which is what made turns stutter. Each page casts
+   its own box-shadow instead, which the compositor handles for free. The
+   book never slides either; only the turning page moves. */
 .e-book {
   position: relative;
   display: flex;
-  perspective: 2600px;
-  filter: drop-shadow(0 24px 52px rgba(0, 0, 0, .5));
-  /* the centring slide for a lone cover/last page — same duration and
-     curve as the turning leaf, so the two read as one movement */
-  transition: transform .62s cubic-bezier(.42, .04, .28, 1);
+  perspective: 2400px;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
 }
-@media (prefers-reduced-motion: reduce) { .e-book { transition: none } }
+.e-book:active { cursor: grabbing }
 /* A lone page is centred by sliding the whole two-page frame, which pushes
    its empty half past the stage edge. Clip that horizontally so it can never
    add a sideways scrollbar — but only horizontally: a turning leaf leans
@@ -388,6 +392,8 @@ figure[data-video-cell] video { border-radius: inherit }
   background: #0f1e28;
   overflow: hidden;
 }
+/* No shadows on the pages or down the spine: every version of them showed
+   up as something appearing mid-turn. The pages sit flat on the stage. */
 .e-book-side.e-book-empty { background: transparent }
 .e-book-side img { width: 100%; height: 100%; object-fit: contain; display: block; user-select: none; -webkit-user-drag: none }
 /* a hairline down the spine so the two halves read as one bound object */
@@ -405,9 +411,19 @@ figure[data-video-cell] video { border-radius: inherit }
   height: 100%;
   transform-origin: left center;
   transform-style: preserve-3d;
+  will-change: transform;
   z-index: 5;
 }
-.e-book-leaf.e-book-turning { transition: transform .62s cubic-bezier(.42, .04, .28, 1) }
+/* shading across the turning page: it darkens toward its free edge as it
+   lifts off the paper, and lightens again as it lands */
+.e-book-shade {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.e-book-front .e-book-shade { background: linear-gradient(to right, rgba(0, 0, 0, .15), rgba(0, 0, 0, .75)) }
+.e-book-back .e-book-shade { background: linear-gradient(to left, rgba(0, 0, 0, .15), rgba(0, 0, 0, .75)) }
 
 /* Single-page mode (phones): the book is one page wide, so the right half
    becomes the whole book and the turning leaf spans all of it. */
@@ -1559,3 +1575,7 @@ nav:has(> div > [data-resume]) [aria-current="page"] { color: #f2f6f7 !important
   .e-brands { flex-direction: column; align-items: stretch; gap: 16px; padding-left: 0; padding-right: 0 }
   .e-brands-label { max-width: none; padding: 0 16px }
 }
+
+/* The open-book reader has no thumbnail rail: the book itself is the
+   navigation (arrows, edges, tap or drag), and the page counter stays. */
+.e-book-host .e-doc-strip { display: none }
